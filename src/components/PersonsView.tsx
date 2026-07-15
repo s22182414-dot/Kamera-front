@@ -136,9 +136,7 @@ export default function PersonsView() {
     if (selectedTab === 'registered') matchTab = !p.isAutoCaptured && p.role !== 'captured'
     if (selectedTab === 'captured') matchTab = !!p.isAutoCaptured || p.role === 'captured'
 
-    const matchRole = selectedRole === 'all' || p.role === selectedRole
-
-    return matchSearch && matchTab && matchRole
+    return matchSearch && matchTab
   })
 
   const capturedCount = persons.filter(p => p.isAutoCaptured || p.role === 'captured').length
