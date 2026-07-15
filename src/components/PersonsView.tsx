@@ -17,7 +17,6 @@ export default function PersonsView() {
   const [persons, setPersons] = useState<KnownPerson[]>([])
   const [search, setSearch] = useState('')
   const [selectedTab, setSelectedTab] = useState<'all' | 'registered' | 'captured'>('all')
-  const [selectedRole, setSelectedRole] = useState<string>('all')
   const [showModal, setShowModal] = useState(false)
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null)
 
