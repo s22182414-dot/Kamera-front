@@ -4,6 +4,7 @@ import { Send, Bot, User, Sparkles, Clock, Calendar, ChevronLeft, ChevronRight, 
 import { useEvents } from '../hooks/useEvents'
 import { eventsStore } from '../store/eventsStore'
 import { chatStore, type ChatMessage } from '../store/chatStore'
+import { apiService } from '../services/api'
 
 interface ResponsePayload {
   reply: string
@@ -255,21 +256,36 @@ export default function ChatPanel() {
     setInput('')
     setIsTyping(true)
 
-    await new Promise(r => setTimeout(r, 600 + Math.random() * 400))
+    let replyText = ''
+    let replyImage: string | undefined = undefined
 
-    const response = getResponse(text, selectedDate)
+    try {
+      const apiReply = await apiService.queryAiChat(text, selectedDate)
+      if (apiReply) {
+        replyText = apiReply
+      } else {
+        const localResp = getResponse(text, selectedDate)
+        replyText = localResp.reply
+        replyImage = localResp.image
+      }
+    } catch {
+      const localResp = getResponse(text, selectedDate)
+      replyText = localResp.reply
+      replyImage = localResp.image
+    }
+
     const aiTime = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
 
     chatStore.addMessage(selectedDate, {
       role: 'assistant',
-      text: response.reply,
-      image: response.image,
+      text: replyText,
+      image: replyImage,
       time: aiTime
     })
 
     setMessages(chatStore.getByDate(selectedDate))
     setIsTyping(false)
-    await speakText(response.reply)
+    await speakText(replyText)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
