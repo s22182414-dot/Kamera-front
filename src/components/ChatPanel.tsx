@@ -1,6 +1,6 @@
 import './ChatPanel.css'
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Sparkles, Clock, Calendar, ChevronLeft, ChevronRight, X, Eye } from 'lucide-react'
+import { Send, Bot, User, Sparkles, Clock, Calendar, ChevronLeft, ChevronRight, X, Eye, Mic, MicOff, Volume2 } from 'lucide-react'
 import { useEvents } from '../hooks/useEvents'
 import { eventsStore } from '../store/eventsStore'
 import { chatStore, type ChatMessage } from '../store/chatStore'
@@ -10,13 +10,32 @@ interface ResponsePayload {
   image?: string
 }
 
+function getFormattedDateText(dateStr: string, formatType: 'sanasida' | 'kuni' | 'sanasidagi'): string {
+  const todayStr = new Date().toISOString().split('T')[0]
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+  if (dateStr === todayStr) {
+    if (formatType === 'sanasidagi') return 'bugungi'
+    return 'bugun'
+  } else if (dateStr === yesterdayStr) {
+    if (formatType === 'sanasidagi') return 'kechagi'
+    return 'kecha'
+  } else {
+    if (formatType === 'sanasida') return `${dateStr} sanasida`
+    if (formatType === 'kuni') return `${dateStr} kuni`
+    return `${dateStr} sanasidagi`
+  }
+}
+
 function getResponse(text: string, selectedDate: string): ResponsePayload {
   const lower = text.toLowerCase()
   const dayEvents = eventsStore.getByDate(selectedDate)
 
   if (dayEvents.length === 0) {
     return {
-      reply: `📅 ${selectedDate} sanasida kamera tomonidan hech qanday voqea yoki harakat qayd etilmagan.`
+      reply: `📅 ${getFormattedDateText(selectedDate, 'sanasida')} kamera tomonidan hech qanday voqea yoki harakat qayd etilmagan.`
     }
   }
 
@@ -32,8 +51,8 @@ function getResponse(text: string, selectedDate: string): ResponsePayload {
     const names = Array.from(new Set(known.map(e => e.person).filter(Boolean))).join(', ')
     return {
       reply: names
-        ? `${selectedDate} kuni quyidagi taniqli shaxslar kelgan: ${names}. Jami ${known.length} kishi.`
-        : `${selectedDate} kuni taniqli shaxslar tashrifi qayd etilmadi. (Kamerada tushgan noma'lum shaxslar: ${unknown.length} ta).`,
+        ? `${getFormattedDateText(selectedDate, 'kuni')} quyidagi taniqli shaxslar kelgan: ${names}. Jami ${known.length} kishi.`
+        : `${getFormattedDateText(selectedDate, 'kuni')} taniqli shaxslar tashrifi qayd etilmadi. (Kamerada tushgan noma'lum shaxslar: ${unknown.length} ta).`,
       image: latestSnapshot
     }
   }
@@ -41,21 +60,21 @@ function getResponse(text: string, selectedDate: string): ResponsePayload {
   if (lower.includes('rasm') || lower.includes('surat') || lower.includes('harakat') || lower.includes('ko\'rsat') || lower.includes('korsat') || lower.includes('oxirgi')) {
     const lastEvent = dayEvents[dayEvents.length - 1]
     return {
-      reply: `📸 ${selectedDate} sanasidagi oxirgi kamera snapshot kadr rasmi (${lastEvent?.time || ''}):`,
+      reply: `📸 ${getFormattedDateText(selectedDate, 'sanasidagi')} oxirgi kamera snapshot kadr rasmi (${lastEvent?.time || ''}):`,
       image: lastEvent?.imageData || latestSnapshot
     }
   }
 
   if (lower.includes('keldi') || lower.includes('tashrif') || lower.includes('nechta')) {
     return {
-      reply: `${selectedDate} kuni jami ${dayEvents.length} ta voqea qayd etilgan: ${known.length} ta taniqli, ${unknown.length} ta noma'lum va ${motion.length} ta harakat.`,
+      reply: `${getFormattedDateText(selectedDate, 'kuni')} jami ${dayEvents.length} ta voqea qayd etilgan: ${known.length} ta taniqli, ${unknown.length} ta noma'lum va ${motion.length} ta harakat.`,
       image: latestSnapshot
     }
   }
 
   const names = Array.from(new Set(known.map(e => e.person).filter(Boolean))).join(', ')
   return {
-    reply: `📅 ${selectedDate} sanasidagi kamera yozuvlari tahlili:\n` +
+    reply: `📅 ${getFormattedDateText(selectedDate, 'sanasidagi')} kamera yozuvlari tahlili:\n` +
       `• Jami voqealar: ${dayEvents.length} ta\n` +
       `• Taniqli shaxslar: ${known.length} ta${names ? ` (${names})` : ''}\n` +
       `• Noma'lum shaxslar: ${unknown.length} ta\n` +
@@ -88,6 +107,10 @@ export default function ChatPanel() {
   const [showCalendar, setShowCalendar] = useState(false)
   const [currDate, setCurrDate] = useState(new Date())
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [isListening, setIsListening] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -122,6 +145,107 @@ export default function ChatPanel() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showCalendar])
 
+  const speakText = async (rawText: string) => {
+    window.speechSynthesis?.cancel()
+
+    // Clean text: remove emojis, bullet chars, extra whitespace
+    const cleanText = rawText
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+      .replace(/[•·▪▸►]/g, ',')
+      .replace(/\n{2,}/g, '. ')
+      .replace(/\n/g, ', ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+
+    if (!cleanText) return
+    setIsSpeaking(true)
+
+    // Try backend Google Translate TTS (natural Uzbek voice)
+    try {
+      const url = `http://localhost:8000/api/tts?text=${encodeURIComponent(cleanText)}`
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error('TTS backend error')
+      const blob = await resp.blob()
+      const audioUrl = URL.createObjectURL(blob)
+      const audio = new Audio(audioUrl)
+      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl) }
+      audio.onerror = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl) }
+      await audio.play()
+      return
+    } catch {
+      // Fallback: browser SpeechSynthesis — Uzbek voice ONLY
+    }
+
+    if (!window.speechSynthesis) { setIsSpeaking(false); return }
+
+    const doSpeak = (voices: SpeechSynthesisVoice[]) => {
+      // Only Uzbek voices — never Russian
+      const pick =
+        voices.find(v => v.lang.startsWith('uz') && v.name.toLowerCase().includes('google')) ||
+        voices.find(v => v.lang.startsWith('uz')) ||
+        voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('google')) ||
+        voices.find(v => v.lang.startsWith('en')) ||
+        null
+
+      const utter = new SpeechSynthesisUtterance(cleanText)
+      if (pick) { utter.voice = pick; utter.lang = pick.lang }
+      else { utter.lang = 'uz-UZ' }
+      utter.rate = 0.9
+      utter.pitch = 1.0
+      utter.volume = 1
+      utter.onend = () => setIsSpeaking(false)
+      utter.onerror = () => setIsSpeaking(false)
+      window.speechSynthesis.speak(utter)
+    }
+
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      doSpeak(voices)
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null
+        doSpeak(window.speechSynthesis.getVoices())
+      }
+    }
+  }
+
+  const startVoiceInput = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const win = window as any
+    const SpeechRecognitionAPI = win.SpeechRecognition || win.webkitSpeechRecognition
+
+    if (!SpeechRecognitionAPI) {
+      alert('Brauzeringiz ovozli kiritishni qo\'llamaydi.')
+      return
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop()
+      setIsListening(false)
+      return
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recognition: any = new SpeechRecognitionAPI()
+    recognition.lang = 'uz-UZ'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognitionRef.current = recognition
+
+    recognition.onstart = () => setIsListening(true)
+    recognition.onend = () => setIsListening(false)
+    recognition.onerror = () => setIsListening(false)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      const transcript: string = event.results[0][0].transcript
+      // Auto-send immediately after speech is captured
+      sendMessage(transcript)
+    }
+
+    recognition.start()
+  }
+
   const sendMessage = async (text: string) => {
     if (!text.trim()) return
 
@@ -145,6 +269,7 @@ export default function ChatPanel() {
 
     setMessages(chatStore.getByDate(selectedDate))
     setIsTyping(false)
+    await speakText(response.reply)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -192,7 +317,11 @@ export default function ChatPanel() {
           <div>
             <h2 className="chat-title">AI Yordamchi</h2>
             <p className="chat-sub">
-              {selectedDate === todayStr ? '📅 Bugun (Jonli)' : `📅 Sana: ${selectedDate}`}
+              {selectedDate === todayStr
+                ? '📅 Bugun (Jonli)'
+                : selectedDate === (() => { const y = new Date(); y.setDate(y.getDate()-1); return y.toISOString().split('T')[0] })()
+                ? '📅 Kecha'
+                : `📅 Sana: ${selectedDate}`}
             </p>
           </div>
         </div>
@@ -343,16 +472,44 @@ export default function ChatPanel() {
         <textarea
           ref={inputRef}
           className="chat-textarea"
-          placeholder={selectedDate === todayStr ? "Bugungi kamera haqida savol bering..." : `${selectedDate} sanasidagi suhbat...`}
+          placeholder={
+            isListening
+              ? '🎙️ Tinglayapman...'
+              : isSpeaking
+              ? '🔊 AI javob beryapti...'
+              : selectedDate === todayStr
+              ? 'Bugungi kamera haqida savol bering...'
+              : `${getFormattedDateText(selectedDate, 'sanasidagi')} suhbat...`
+          }
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={1}
+          disabled={isListening}
         />
+        {isSpeaking && (
+          <button
+            className="chat-speaking-btn"
+            onClick={() => { window.speechSynthesis.cancel(); setIsSpeaking(false) }}
+            title="Ovozni to'xtatish"
+          >
+            <Volume2 size={16} />
+            <span className="voice-ripple" />
+          </button>
+        )}
+        <button
+          className={`chat-voice-btn ${isListening ? 'listening' : ''}`}
+          onClick={startVoiceInput}
+          title={isListening ? 'Ovoz yozishni to\'xtatish' : 'Ovozli savol berish'}
+          disabled={isTyping || isSpeaking}
+        >
+          {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+          {isListening && <span className="voice-ripple" />}
+        </button>
         <button
           className={`chat-send-btn ${input.trim() ? 'active' : ''}`}
           onClick={() => sendMessage(input)}
-          disabled={!input.trim() || isTyping}
+          disabled={!input.trim() || isTyping || isListening}
         >
           <Send size={16} />
         </button>

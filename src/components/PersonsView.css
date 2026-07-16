@@ -399,7 +399,6 @@
 .btn-change-photo {
   position: absolute;
   bottom: 0;
-  inset-x: 0;
   padding: 6px 0;
   background: rgba(0, 0, 0, 0.75);
   color: white;
