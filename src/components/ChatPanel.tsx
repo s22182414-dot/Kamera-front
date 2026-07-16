@@ -161,9 +161,10 @@ export default function ChatPanel() {
     if (!cleanText) return
     setIsSpeaking(true)
 
-    // Try backend Google Translate TTS (natural Uzbek voice)
+    // Try backend Google TTS (natural Uzbek voice)
     try {
-      const url = `http://localhost:8000/api/tts?text=${encodeURIComponent(cleanText)}`
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+      const url = `${baseUrl}/tts?text=${encodeURIComponent(cleanText)}`
       const resp = await fetch(url)
       if (!resp.ok) throw new Error('TTS backend error')
       const blob = await resp.blob()
