@@ -19,6 +19,7 @@ export default function PersonsView() {
   const [selectedTab, setSelectedTab] = useState<'all' | 'registered' | 'captured'>('all')
   const [showModal, setShowModal] = useState(false)
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null)
+  const [previewPhoto, setPreviewPhoto] = useState<{ photo: string; name: string } | null>(null)
 
   // Form State
   const [name, setName] = useState('')
@@ -212,7 +213,11 @@ export default function PersonsView() {
 
             return (
               <div key={person.id} className={`person-card glass-card animate-fade-in ${isCap ? 'is-auto-captured' : ''}`}>
-                <div className="person-avatar-wrap">
+                <div 
+                  className={`person-avatar-wrap ${person.photo ? 'clickable-avatar' : ''}`}
+                  onClick={() => person.photo && setPreviewPhoto({ photo: person.photo, name: person.name })}
+                  title={person.photo ? "Rasmni kattalashtirib ko'rish" : ""}
+                >
                   {person.photo ? (
                     <img src={person.photo} alt={person.name} className="person-avatar-img" />
                   ) : (
@@ -340,6 +345,21 @@ export default function PersonsView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      {/* Photo Zoom Modal */}
+      {previewPhoto && (
+        <div className="modal-backdrop animate-fade-in" onClick={() => setPreviewPhoto(null)}>
+          <div className="photo-modal-card glass-card animate-scale-up" onClick={e => e.stopPropagation()}>
+            <div className="photo-modal-header">
+              <h3>{previewPhoto.name}</h3>
+              <button className="modal-close-btn" onClick={() => setPreviewPhoto(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="photo-modal-body">
+              <img src={previewPhoto.photo} alt={previewPhoto.name} className="photo-modal-img" />
+            </div>
           </div>
         </div>
       )}

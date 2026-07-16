@@ -488,3 +488,56 @@
   gap: 10px;
   margin-top: 8px;
 }
+
+/* Clickable photo zoom preview modal */
+.clickable-avatar {
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.clickable-avatar:hover {
+  transform: scale(1.05);
+}
+
+.photo-modal-card {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-neon);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.9), 0 0 50px rgba(6, 214, 255, 0.2);
+}
+
+.photo-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-glass);
+}
+
+.photo-modal-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.photo-modal-body {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.photo-modal-img {
+  max-width: 500px;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
