@@ -147,10 +147,11 @@
   position: relative;
   padding: 16px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
   border-radius: var(--radius-lg);
   transition: all var(--transition-base);
+  margin-bottom: 8px;
 }
 
 .person-card.is-auto-captured {
@@ -166,8 +167,8 @@
 
 .person-avatar-wrap {
   position: relative;
-  width: 58px;
-  height: 58px;
+  width: 54px;
+  height: 54px;
   flex-shrink: 0;
 }
 
@@ -193,16 +194,15 @@
 }
 
 .person-role-badge {
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.6rem;
+  display: inline-block;
+  font-size: 0.62rem;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   white-space: nowrap;
   letter-spacing: 0.02em;
+  width: fit-content;
+  margin-top: 2px;
 }
 
 .role-blue { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
@@ -216,7 +216,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .person-name {
@@ -240,15 +240,16 @@
 }
 
 .btn-promote {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  gap: 5px;
+  padding: 4px 10px;
+  margin-top: 4px;
   background: var(--accent-dim);
   border: 1px solid var(--border-accent);
   border-radius: var(--radius-md);
   color: var(--accent-light);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
   align-self: flex-start;

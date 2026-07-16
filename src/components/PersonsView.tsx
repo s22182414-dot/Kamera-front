@@ -220,13 +220,13 @@ export default function PersonsView() {
                       <Camera size={24} />
                     </div>
                   )}
-                  <span className={`person-role-badge role-${roleInfo.color}`}>
-                    {roleInfo.label}
-                  </span>
                 </div>
 
                 <div className="person-info">
                   <h3 className="person-name">{person.name}</h3>
+                  <span className={`person-role-badge role-${roleInfo.color}`}>
+                    {roleInfo.label}
+                  </span>
                   <div className="person-stats">
                     <span className="person-visits">
                       <ShieldCheck size={13} /> {isCap ? 'Avto-tutilgan snapshot' : `${visits} ta tashrif`}
